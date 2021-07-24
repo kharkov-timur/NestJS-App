@@ -4,9 +4,9 @@ services:
     container_name: event-app-postgres
     image: postgres:latest
     environment:
-      POSTGRES_PASSWORD: c12f8481c8058d5cf12bfdb37ac4fbf870c6ae543af15d328ce7972278bbff55
-      POSTGRES_USER: cbavqykmbejxji
-      POSTGRES_DB: d2oq3c9bub8pth
+      POSTGRES_PASSWORD:
+      POSTGRES_USER:
+      POSTGRES_DB:
     ports:
       - '5432:5432'
     env_file:
