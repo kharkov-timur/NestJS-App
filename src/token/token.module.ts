@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TokenService } from './token.service';
 import { Token } from './token.entity';
+import { JwtStrategy } from 'src/auth/jwt.strategy';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Token])],

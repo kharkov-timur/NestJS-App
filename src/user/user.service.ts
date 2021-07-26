@@ -19,13 +19,18 @@ export class UserService {
   ) {}
 
   async hashPassword(password: string): Promise<string> {
-    const salt = await bcrypt.genSalt(process.env.SALT);
+    const salt = await bcrypt.genSalt(JSON.parse(process.env.SALT));
     return await bcrypt.hash(password, salt);
   }
 
   async createUser(body: BaseUserDto, role: string): Promise<User> {
     const password = await this.hashPassword(body.password);
     const confirmPassword = await this.hashPassword(body.confirmPassword);
+
+    console.log(
+      '🚀 ~ file: user.service.ts ~ line 26 ~ UserService ~ createUser ~ BaseUserDto',
+      new BaseUserDto(),
+    );
     const createdUser = _.assignIn(BaseUserDto, {
       password,
       confirmPassword,

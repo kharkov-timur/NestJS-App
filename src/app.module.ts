@@ -21,6 +21,7 @@ import { AuthModule } from './auth/auth.module';
       synchronize: JSON.parse(process.env.PORSTRES_SYNCHRONIZE),
       entities: ['dist/**/*.entity{.ts,.js}'],
       migrations: ['database/migration/seed/**/*.js'],
+      autoLoadEntities: true,
       cli: {
         entitiesDir: 'src',
         migrationsDir: 'database/migration/seed',

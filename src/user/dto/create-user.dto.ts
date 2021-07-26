@@ -23,6 +23,6 @@ export class CreateUserDto extends BaseUserDto {
 
   @ApiProperty()
   @IsOptional()
-  @IsPhoneNumber('UA')
+  // @IsPhoneNumber('UA')
   phoneNumber: string;
 }

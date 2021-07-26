@@ -1,11 +1,13 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
 
 import { MailService } from './mail.service';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
+    forwardRef(() => AuthModule),
     MailerModule.forRoot({
       transport: {
         host: process.env.SMTP_HOST,
