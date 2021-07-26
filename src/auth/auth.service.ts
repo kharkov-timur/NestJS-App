@@ -47,9 +47,7 @@ export class AuthService {
 
   public async signUp(body: CreateUserDto): Promise<boolean> {
     const user = await this.userService.createUser(body, roleEnum.USER);
-    const token = await this.authService.signUser(user, false);
-    const confirmLink = `${process.env.FRONT_FULL_LINK}/${process.env.CONFIRMATION_LINK}?code=${token}&userId=${user.id}`;
-    await this.mailService.sendConfirmation(user, confirmLink);
+    await this.sendConfirmation(user);
     return true;
   }
 
@@ -124,7 +122,7 @@ export class AuthService {
     const token = await this.signUser(user, false);
     const confirmLink = `${this.clientAppUrl}/auth/confirm?token=${token}`;
 
-    await this.mailService.sendConfirmation(user, confirmLink);
+    await this.mailService.sendEmailToConfirm(user, confirmLink);
   }
 
   private async generateToken(data, options?: SignOptions): Promise<string> {
@@ -157,6 +155,6 @@ export class AuthService {
     const token = await this.signUser(user);
     const forgotLink = `${this.clientAppUrl}/auth/forgotPassword?token=${token}&userId=${user.id}`;
 
-    await this.mailService.sendConfirmation(user, forgotLink);
+    await this.mailService.sendEmailToConfirm(user, forgotLink);
   }
 }

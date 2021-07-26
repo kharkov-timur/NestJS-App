@@ -29,7 +29,6 @@ lerna-debug.log*
 
 # Config
 .env.development
-.env.development
 
 
 # IDE - VSCode
@@ -40,3 +39,5 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 
+/package-lock.json
+/yarn.lock

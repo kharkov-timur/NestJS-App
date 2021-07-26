@@ -3,31 +3,25 @@ import { MailerService, ISendMailOptions } from '@nestjs-modules/mailer';
 import * as path from 'path';
 
 import { User } from '../user/user.entity';
-import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 export class MailService {
   constructor(
     @Inject(MailerService)
     private mailerService: MailerService,
-    private authService: AuthService,
   ) {}
 
-  public async sendConfirmation(
+  public async sendEmailToConfirm(
     user: User,
     confirmLink: string,
   ): Promise<boolean> {
-    const token = await this.authService.signUser(user, false);
-    const frontUrl = `${process.env.FRONT_URL}?${token}`;
-
     return await this.sendMailPromise({
-      to: process.env.FROM_SENDER,
+      to: user.email,
       template: 'register-invite',
       subject: 'Email confirmation',
       text: 'Confirm your email',
       context: {
         url: confirmLink,
-        frontUrl,
       },
     });
   }
