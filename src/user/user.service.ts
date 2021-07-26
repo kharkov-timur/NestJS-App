@@ -9,6 +9,7 @@ import { BaseUserDto } from './dto/base-user.dto';
 import { PaginationDto } from '@shared/pagination.dto';
 import { PaginatedUsers } from './dto/paginatedUsers.dto';
 import { getTotalPages, takeSkipCalculator } from '../utils/get-total-pages';
+import { IUser } from './interfaces/user.intarface';
 
 @Injectable()
 export class UserService {

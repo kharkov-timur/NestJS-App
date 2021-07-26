@@ -30,6 +30,8 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
+  private readonly clientAppUrl: string;
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -39,7 +41,9 @@ export class AuthService {
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
-  ) {}
+  ) {
+    this.clientAppUrl = this.configService.get<string>('FE_APP_URL');
+  }
 
   public async signUp(body: CreateUserDto): Promise<boolean> {
     const user = await this.userService.createUser(body, roleEnum.USER);
@@ -89,28 +93,6 @@ export class AuthService {
     return token;
   }
 
-  private async generateToken(data, options?: SignOptions): Promise<string> {
-    return this.jwtService.sign(data, options);
-  }
-
-  private async verifyToken(token: string): Promise<any> {
-    try {
-      const data = this.jwtService.verify(token);
-      const tokenExists = await this.tokenService.existsToken(data.id, token);
-
-      if (tokenExists) {
-        return data;
-      }
-      throw new UnauthorizedException();
-    } catch (error) {
-      throw new UnauthorizedException();
-    }
-  }
-
-  private async saveToken(token: CreateUserTokenDto): Promise<IUserToken> {
-    return await this.tokenService.createToken(token);
-  }
-
   async changePassword(
     userId: number,
     changePasswordDto: ChangePasswordDto,
@@ -138,13 +120,42 @@ export class AuthService {
     }
   }
 
+  async sendConfirmation(user: User) {
+    const token = await this.signUser(user, false);
+    const confirmLink = `${this.clientAppUrl}/auth/confirm?token=${token}`;
+
+    await this.mailService.sendConfirmation(user, confirmLink);
+  }
+
+  private async generateToken(data, options?: SignOptions): Promise<string> {
+    return this.jwtService.sign(data, options);
+  }
+
+  private async verifyToken(token: string): Promise<any> {
+    try {
+      const data = this.jwtService.verify(token);
+      const tokenExists = await this.tokenService.existsToken(data.id, token);
+
+      if (tokenExists) {
+        return data;
+      }
+      throw new UnauthorizedException();
+    } catch (error) {
+      throw new UnauthorizedException();
+    }
+  }
+
+  private async saveToken(token: CreateUserTokenDto): Promise<IUserToken> {
+    return await this.tokenService.createToken(token);
+  }
+
   async forgotPassword(body: ForgotPasswordDto): Promise<void> {
     const user = await this.userService.findUserByEmail(body.email);
     if (!user) {
       throw new BadRequestException('Invalid email');
     }
     const token = await this.signUser(user);
-    const forgotLink = `${process.env.FRONT_FULL_LINK}/${process.env.CONFIRMATION_LINK}?code=${token}&userId=${user.id}`;
+    const forgotLink = `${this.clientAppUrl}/auth/forgotPassword?token=${token}&userId=${user.id}`;
 
     await this.mailService.sendConfirmation(user, forgotLink);
   }
