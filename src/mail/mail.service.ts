@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MailerService, ISendMailOptions } from '@nestjs-modules/mailer';
 import * as path from 'path';
 
-import { User } from '../user/user.entity';
+import { IUser } from '../user/interfaces/user.intarface';
 
 @Injectable()
 export class MailService {
@@ -12,9 +12,12 @@ export class MailService {
   ) {}
 
   public async sendEmailToConfirm(
-    user: User,
+    user: IUser,
+    token: string,
     confirmLink: string,
   ): Promise<boolean> {
+    const frontUrl = `${process.env.FRONT_URL}?${token}`;
+
     return await this.sendMailPromise({
       to: user.email,
       template: 'register-invite',
@@ -22,6 +25,7 @@ export class MailService {
       text: 'Confirm your email',
       context: {
         url: confirmLink,
+        frontUrl,
       },
     });
   }

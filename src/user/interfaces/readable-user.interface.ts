@@ -1,5 +1,4 @@
 export interface IReadableUser {
-  id: number;
   firstName: string;
   lastName: string;
   phoneNumber: string;

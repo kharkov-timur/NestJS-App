@@ -1,14 +1,14 @@
-import _ from 'lodash';
+import * as _ from 'lodash';
 import * as bcrypt from 'bcrypt';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DeepPartial, Repository } from 'typeorm';
 
 import { User } from './user.entity';
-import { BaseUserDto } from './dto/base-user.dto';
 import { PaginationDto } from '@shared/pagination.dto';
 import { PaginatedUsers } from './dto/paginatedUsers.dto';
 import { getTotalPages, takeSkipCalculator } from '../utils/get-total-pages';
+import { CreateUserDto } from './dto/create-user.dto';
 import { IUser } from './interfaces/user.intarface';
 
 @Injectable()
@@ -23,29 +23,27 @@ export class UserService {
     return await bcrypt.hash(password, salt);
   }
 
-  async createUser(body: BaseUserDto, role: string): Promise<User> {
-    const password = await this.hashPassword(body.password);
-    const confirmPassword = await this.hashPassword(body.confirmPassword);
+  async createUser(CreateUserDto: CreateUserDto, role: string): Promise<IUser> {
+    const password = await this.hashPassword(CreateUserDto.password);
 
     console.log(
       '🚀 ~ file: user.service.ts ~ line 26 ~ UserService ~ createUser ~ BaseUserDto',
-      new BaseUserDto(),
+      CreateUserDto,
     );
-    const createdUser = _.assignIn(BaseUserDto, {
+    const createdUser = _.assignIn(CreateUserDto, {
       password,
-      confirmPassword,
       role,
     });
 
     return await this.userRepository.save(createdUser);
   }
 
-  async findUser(id: number): Promise<User> {
-    return await this.userRepository.findOne({ where: { id } });
+  async findUser(userId: number): Promise<User> {
+    return await this.userRepository.findOne(userId);
   }
 
-  async findUserByEmail(email: string): Promise<User> {
-    return await this.userRepository.findOne({ where: { email } });
+  async findUserByEmail(email: string): Promise<IUser> {
+    return await this.userRepository.findOne(email);
   }
 
   async updateUser(id: number, payload: Partial<User>) {

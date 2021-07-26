@@ -8,11 +8,12 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import _ from 'lodash';
+import * as moment from 'moment';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { SignOptions } from 'jsonwebtoken';
-import moment from 'moment';
+
 import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';
 import { statusEnum } from '../user/enums/status.enum';
@@ -21,19 +22,22 @@ import { TokenService } from '../token/token.service';
 import { CreateUserTokenDto } from '../token/dto/create-user-token.dto';
 import { IUserToken } from '../token/interfaces/user-token.interface';
 import { MailService } from '../mail/mail.service';
-import { CreateUserDto } from '../user/dto/create-user.dto';
 import { IReadableUser } from '../user/interfaces/readable-user.interface';
 import { protectedFieldsEnum } from '../user/enums/protected-fields.enum';
-import { AuthDto } from './dto/auth.dto';
+import { SignInDto } from './dto/signin.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/fogot-password.dto';
 import { ConfigService } from '@nestjs/config';
+import { CreateUserDto } from '../user/dto/create-user.dto';
+import { IUser } from '../user/interfaces/user.intarface';
 
 @Injectable()
 export class AuthService {
   private readonly clientAppUrl: string;
 
   constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
     private readonly tokenService: TokenService,
@@ -45,14 +49,17 @@ export class AuthService {
     this.clientAppUrl = this.configService.get<string>('FE_APP_URL');
   }
 
-  public async signUp(body: CreateUserDto): Promise<boolean> {
-    const user = await this.userService.createUser(body, roleEnum.USER);
+  public async signUp(CreateUserDto: CreateUserDto): Promise<boolean> {
+    const user = await this.userService.createUser(
+      CreateUserDto,
+      roleEnum.USER,
+    );
     await this.sendConfirmation(user);
     return true;
   }
 
-  public async signIn(dto: AuthDto): Promise<IReadableUser> {
-    const { email, password } = dto;
+  public async signIn(SignInDto: SignInDto): Promise<IReadableUser> {
+    const { email, password } = SignInDto;
     const user = await this.userService.findUserByEmail(email);
 
     if (user && (await bcrypt.compare(password, user.password))) {
@@ -68,7 +75,10 @@ export class AuthService {
     throw new BadRequestException('Invalid credentials');
   }
 
-  async signUser(user: User, withStatusCheck: boolean = true): Promise<string> {
+  async signUser(
+    user: IUser,
+    withStatusCheck: boolean = true,
+  ): Promise<string> {
     if (withStatusCheck && user.status !== statusEnum.CONFIRMED) {
       throw new MethodNotAllowedException();
     }
@@ -80,7 +90,7 @@ export class AuthService {
     };
 
     const token = await this.generateToken(tokenPayload);
-    const expireAt = moment().add(1, 'day').toISOString();
+    const expireAt = moment().add(1, 'd').toISOString();
 
     await this.saveToken({
       token,
@@ -104,25 +114,25 @@ export class AuthService {
     return true;
   }
 
-  // public async confirm(token: string): Promise<any> {
-  //   const data = await this.verifyToken(token);
-  //   const user = await this.userService.findUser(data.id);
+  public async confirm(token: string): Promise<any> {
+    const data = await this.verifyToken(token);
+    const user = await this.userService.findUser(data.id);
 
-  //   await this.tokenService.deleteToken(data.id, token);
+    await this.tokenService.deleteToken(data.id, token);
 
-  //   if (user && user.status === statusEnum.PENDING) {
-  //     user.status = statusEnum.CONFIRMED;
-  //     return await this.userRepository.update(user.id, {
-  //       status: statusEnum.CONFIRMED,
-  //     });
-  //   }
-  // }
+    if (user && user.status === statusEnum.PENDING) {
+      user.status = statusEnum.CONFIRMED;
+      return await this.userRepository.update(user.id, {
+        status: statusEnum.CONFIRMED,
+      });
+    }
+  }
 
-  async sendConfirmation(user: User) {
+  async sendConfirmation(user: IUser) {
     const token = await this.signUser(user, false);
     const confirmLink = `${this.clientAppUrl}/auth/confirm?token=${token}`;
 
-    await this.mailService.sendEmailToConfirm(user, confirmLink);
+    await this.mailService.sendEmailToConfirm(user, confirmLink, token);
   }
 
   private async generateToken(data, options?: SignOptions): Promise<string> {
@@ -155,6 +165,6 @@ export class AuthService {
     const token = await this.signUser(user);
     const forgotLink = `${this.clientAppUrl}/auth/forgotPassword?token=${token}&userId=${user.id}`;
 
-    await this.mailService.sendEmailToConfirm(user, forgotLink);
+    await this.mailService.sendEmailToConfirm(user, forgotLink, token);
   }
 }
