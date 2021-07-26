@@ -33,11 +33,11 @@ export class AuthController {
     return this.authService.signUp(CreateUserDto);
   }
 
-  @Get('/confirm')
-  async confirm(@Query(ValidationPipe) query: ConfirmAccountDto) {
-    await this.authService.confirm(query.token);
-    return true;
-  }
+  // @Get('/confirm')
+  // async confirm(@Query(ValidationPipe) query: ConfirmAccountDto) {
+  //   await this.authService.confirm(query.token);
+  //   return true;
+  // }
 
   @Post('/signIn')
   public async signIn(

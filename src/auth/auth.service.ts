@@ -1,6 +1,8 @@
 import {
   BadRequestException,
+  forwardRef,
   Injectable,
+  Inject,
   MethodNotAllowedException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -11,7 +13,6 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { SignOptions } from 'jsonwebtoken';
 import moment from 'moment';
-
 import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';
 import { statusEnum } from '../user/enums/status.enum';
@@ -31,13 +32,12 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
     private readonly tokenService: TokenService,
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => MailService))
     private readonly mailService: MailService,
   ) {}
 
@@ -124,19 +124,19 @@ export class AuthService {
     return true;
   }
 
-  public async confirm(token: string): Promise<any> {
-    const data = await this.verifyToken(token);
-    const user = await this.userService.findUser(data.id);
+  // public async confirm(token: string): Promise<any> {
+  //   const data = await this.verifyToken(token);
+  //   const user = await this.userService.findUser(data.id);
 
-    await this.tokenService.deleteToken(data.id, token);
+  //   await this.tokenService.deleteToken(data.id, token);
 
-    if (user && user.status === statusEnum.PENDING) {
-      user.status = statusEnum.CONFIRMED;
-      return await this.userRepository.update(user.id, {
-        status: statusEnum.CONFIRMED,
-      });
-    }
-  }
+  //   if (user && user.status === statusEnum.PENDING) {
+  //     user.status = statusEnum.CONFIRMED;
+  //     return await this.userRepository.update(user.id, {
+  //       status: statusEnum.CONFIRMED,
+  //     });
+  //   }
+  // }
 
   async forgotPassword(body: ForgotPasswordDto): Promise<void> {
     const user = await this.userService.findUserByEmail(body.email);
