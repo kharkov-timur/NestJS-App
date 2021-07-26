@@ -1,27 +1,36 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './user/user.entity';
+
+import { configModule } from './configure.root';
+import { TokenModule } from './token/token.module';
+import { MailModule } from './mail/mail.module';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
-import { RoleModule } from './user/role/role.module';
-import { configModule } from './configure.root';
 
 @Module({
   imports: [
+    configModule,
     TypeOrmModule.forRoot({
+      name: 'default',
       type: 'postgres',
       host: process.env.POSTGRES_HOST,
-      port: parseInt(process.env.POSTGRES_PORT),
+      port: JSON.parse(process.env.POSTGRES_PORT),
       username: process.env.POSTGRES_USER,
       password: process.env.POSTGRES_PASSWORD,
       database: process.env.POSTGRES_DB,
-      autoLoadEntities: true,
+      synchronize: JSON.parse(process.env.PORSTRES_SYNCHRONIZE),
+      entities: ['dist/**/*.entity{.ts,.js}'],
+      migrations: ['database/migration/seed/**/*.js'],
+      cli: {
+        entitiesDir: 'src',
+        migrationsDir: 'database/migration/seed',
+      },
       ssl: { rejectUnauthorized: false },
-      entities: [User],
     }),
     AuthModule,
+    TokenModule,
     UserModule,
-    RoleModule,
+    MailModule,
   ],
 })
 export class AppModule {}

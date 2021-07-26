@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { Match } from '../match.decorator';
-import { Role } from '../role/role.entity';
 
 export class BaseUserDto {
   @ApiProperty()
@@ -20,5 +19,7 @@ export class BaseUserDto {
   @Match('password', { message: 'Пароль повинен співпадати' })
   confirmPassword: string;
 
-  role: Role;
+  @ApiProperty()
+  @IsString()
+  role: string;
 }

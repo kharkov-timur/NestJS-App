@@ -1,12 +1,11 @@
-import { hashSync } from 'bcrypt';
+import _ from 'lodash';
+import * as bcrypt from 'bcrypt';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 import { User } from './user.entity';
-import { Repository } from 'typeorm';
-import { Role } from './role/role.entity';
 import { BaseUserDto } from './dto/base-user.dto';
-import { CustomValidation } from '../utils/custom-validation';
 import { PaginationDto } from '@shared/pagination.dto';
 import { PaginatedUsers } from './dto/paginatedUsers.dto';
 import { getTotalPages, takeSkipCalculator } from '../utils/get-total-pages';
@@ -16,49 +15,35 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @InjectRepository(Role)
-    private roleRepository: Repository<Role>,
   ) {}
 
-  async createUser(body: BaseUserDto): Promise<User> {
-    body.password = hashSync(body.password, JSON.parse(process.env.SALT));
-    body.confirmPassword = hashSync(
-      body.confirmPassword,
-      JSON.parse(process.env.SALT),
-    );
-    return await this.userRepository.save(body);
+  async hashPassword(password: string): Promise<string> {
+    const salt = await bcrypt.genSalt(process.env.SALT);
+    return await bcrypt.hash(password, salt);
   }
 
-  async getProfile(userId: number): Promise<User> {
-    return this.userRepository
-      .createQueryBuilder('user')
-      .select([
-        'user.id',
-        'user.createdAt',
-        'user.updatedAt',
-        'user.firstName',
-        'user.lastName',
-        'user.phoneNumber',
-        'user.email',
-        'user.dateOfBirth',
-        'user.googleId',
-        'user.facebookId',
-        'user.role',
-      ])
-      .where({ id: userId })
-      .leftJoin('user.avatar', 'avatar')
-      .addSelect('avatar.name')
-      .getOne();
+  async createUser(body: BaseUserDto, role: string): Promise<User> {
+    const password = await this.hashPassword(body.password);
+    const confirmPassword = await this.hashPassword(body.confirmPassword);
+    const createdUser = _.assignIn(BaseUserDto, {
+      password,
+      confirmPassword,
+      role,
+    });
+
+    return await this.userRepository.save(createdUser);
   }
 
-  async findUser(currentUser: User, id: number): Promise<User> {
-    const user = await this.userRepository.findOne(id, { relations: ['role'] });
-    new CustomValidation().notFound('Користувача', 'ID', id, user);
+  async findUser(id: number): Promise<User> {
+    return await this.userRepository.findOne({ where: { id } });
+  }
 
-    const theCurrentUser = currentUser.id === id;
-    new CustomValidation().noAccess(theCurrentUser);
+  async findUserByEmail(email: string): Promise<User> {
+    return await this.userRepository.findOne({ where: { email } });
+  }
 
-    return user;
+  async updateUser(id: number, payload: Partial<User>) {
+    return this.userRepository.update(id, { ...payload });
   }
 
   async getAllUsers(paginationDto: PaginationDto): Promise<PaginatedUsers> {

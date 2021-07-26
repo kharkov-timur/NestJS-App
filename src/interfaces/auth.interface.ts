@@ -1,5 +1,5 @@
 import { User } from '../user/user.entity';
-import { Role } from '../user/role/role.entity';
+// import { Role } from '../user/role/role.entity';
 import { statusEnum } from '../user/enums/status.enum';
 
 export interface IAuthResponse {
@@ -14,7 +14,7 @@ export interface ICutUser {
   phoneNumber: string;
   email: string;
   status: statusEnum;
-  role: Role;
+  // role: Role;
   avatar: File;
 }
 

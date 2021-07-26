@@ -1,26 +1,65 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+  ValidationPipe,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { RoleService } from '../user/role/role.service';
+import { GetUser } from '../components/decorators/get-user.decorator';
+
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto/auth.dto';
-import { IAuthResponse } from '../interfaces/auth.interface';
 import { CreateUserDto } from '../user/dto/create-user.dto';
+import { ConfirmAccountDto } from './dto/confirm-account.dto';
+import { IReadableUser } from '../user/interfaces/readable-user.interface';
+import { ForgotPasswordDto } from './dto/fogot-password.dto';
+import { IUser } from '../user/interfaces/user.intarface';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private roleService: RoleService,
-    private authService: AuthService,
-  ) {}
+  constructor(private authService: AuthService) {}
 
-  @Post('login')
-  public async login(@Body() dto: AuthDto): Promise<IAuthResponse> {
-    return this.authService.login(dto);
+  @Post('/signUp')
+  async signUp(
+    @Body(ValidationPipe) CreateUserDto: CreateUserDto,
+  ): Promise<boolean> {
+    return this.authService.signUp(CreateUserDto);
   }
 
-  @Post('register')
-  public async register(@Body() dto: CreateUserDto): Promise<IAuthResponse> {
-    return this.authService.register(dto);
+  @Get('/confirm')
+  async confirm(@Query(ValidationPipe) query: ConfirmAccountDto) {
+    await this.authService.confirm(query.token);
+    return true;
+  }
+
+  @Post('/signIn')
+  public async signIn(
+    @Body(new ValidationPipe()) dto: AuthDto,
+  ): Promise<IReadableUser> {
+    return this.authService.signIn(dto);
+  }
+
+  @Post('/forgotPassword')
+  public async forgotPassword(
+    @GetUser() user: IUser,
+    @Body(new ValidationPipe()) dto: ForgotPasswordDto,
+  ): Promise<void> {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Patch('/changePassword')
+  @UseGuards(AuthGuard())
+  async changePassword(
+    @GetUser() user: IUser,
+    @Body(new ValidationPipe()) changePasswordDto: ChangePasswordDto,
+  ): Promise<boolean> {
+    return this.authService.changePassword(user.id, changePasswordDto);
   }
 }

@@ -30,18 +30,11 @@ export class UserController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @Get('profile')
-  public async getProfile(@Request() req: IRequest): Promise<User> {
-    return this.userService.getProfile(req.user.id);
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
   @Get(':id')
   public async findOne(
     @Request() req: IRequest,
     @Param('id') id: number,
   ): Promise<User> {
-    return this.userService.findUser(req.user, id);
+    return this.userService.findUser(req.user.id);
   }
 }

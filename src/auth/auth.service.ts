@@ -1,132 +1,151 @@
 import {
-  HttpException,
-  HttpStatus,
+  BadRequestException,
   Injectable,
+  MethodNotAllowedException,
   UnauthorizedException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+import _ from 'lodash';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
-import { compare } from 'bcrypt';
 import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
+import { SignOptions } from 'jsonwebtoken';
+import moment from 'moment';
 
 import { User } from '../user/user.entity';
-import { ActivateLink } from '../user/activate-link.entity';
 import { UserService } from '../user/user.service';
-import { RoleService } from '../user/role/role.service';
-import { AuthDto } from './dto/auth.dto';
-import { IAuthResponse } from '../interfaces/auth.interface';
 import { statusEnum } from '../user/enums/status.enum';
-import { IUserValidationStrategy } from '@shared/strategires/strategy';
 import { roleEnum } from '../user/enums/role.enum';
-import { BaseUserDto } from '../user/dto/base-user.dto';
-import { CustomValidation } from '../utils/custom-validation';
+import { TokenService } from '../token/token.service';
+import { CreateUserTokenDto } from '../token/dto/create-user-token.dto';
+import { IUserToken } from '../token/interfaces/user-token.interface';
+import { MailService } from '../mail/mail.service';
+import { CreateUserDto } from '../user/dto/create-user.dto';
+import { IReadableUser } from '../user/interfaces/readable-user.interface';
+import { protectedFieldsEnum } from '../user/enums/protected-fields.enum';
+import { AuthDto } from './dto/auth.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/fogot-password.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(ActivateLink)
-    private readonly activationLinkRepository: Repository<ActivateLink>,
-    private readonly userService: UserService,
-    private readonly roleService: RoleService,
     private readonly jwtService: JwtService,
+    private readonly userService: UserService,
+    private readonly tokenService: TokenService,
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
-  public async login(
-    body: AuthDto,
-    strategy?: IUserValidationStrategy,
-  ): Promise<IAuthResponse> {
-    const user = await this.userRepository.findOne(
-      { email: body.email },
-      {
-        relations: ['role'],
-      },
-    );
+  public async signUp(body: CreateUserDto): Promise<boolean> {
+    const user = await this.userService.createUser(body, roleEnum.USER);
+    const token = await this.authService.signUser(user, false);
+    const confirmLink = `${process.env.FRONT_FULL_LINK}/${process.env.CONFIRMATION_LINK}?code=${token}&userId=${user.id}`;
+    await this.mailService.sendConfirmation(user, confirmLink);
+    return true;
+  }
 
-    if (!user) {
-      throw new HttpException(
-        'Такого користувача не існує',
-        HttpStatus.UNAUTHORIZED,
-      );
+  public async signIn(dto: AuthDto): Promise<IReadableUser> {
+    const { email, password } = dto;
+    const user = await this.userService.findUserByEmail(email);
+
+    if (user && (await bcrypt.compare(password, user.password))) {
+      const token = await this.signUser(user);
+      const readableUser: IReadableUser = user;
+      readableUser.accessToken = token;
+
+      return _.omit<any>(
+        readableUser,
+        Object.values(protectedFieldsEnum),
+      ) as IReadableUser;
     }
+    throw new BadRequestException('Invalid credentials');
+  }
 
-    if (!user.password) {
-      throw new HttpException(
-        'Ви не встановлювали пароль, бо рееєструвались через гугл, спробуйте авторизацію через гугл, або відновіть пароль',
-        HttpStatus.UNAUTHORIZED,
-      );
+  async signUser(user: User, withStatusCheck: boolean = true): Promise<string> {
+    if (withStatusCheck && user.status !== statusEnum.CONFIRMED) {
+      throw new MethodNotAllowedException();
     }
+    const { id, status, role } = user;
+    const tokenPayload = {
+      id,
+      status,
+      role,
+    };
 
-    if (user.status !== statusEnum.CONFIRMED) {
-      throw new HttpException(
-        'Вам потрібно підтвердити ваш email для успішного логіна',
-        HttpStatus.CONFLICT,
-      );
-    }
+    const token = await this.generateToken(tokenPayload);
+    const expireAt = moment().add(1, 'day').toISOString();
 
-    if (strategy) {
-      strategy.validate(user);
-    }
-
-    const googleUser = await this.userRepository.findOne({
-      where: { id: user.id, password: null },
+    await this.saveToken({
+      token,
+      expireAt,
+      userId: id,
     });
-    if (googleUser) {
+
+    return token;
+  }
+
+  private async generateToken(data, options?: SignOptions): Promise<string> {
+    return this.jwtService.sign(data, options);
+  }
+
+  private async verifyToken(token: string): Promise<any> {
+    try {
+      const data = this.jwtService.verify(token);
+      const tokenExists = await this.tokenService.existsToken(data.id, token);
+
+      if (tokenExists) {
+        return data;
+      }
+      throw new UnauthorizedException();
+    } catch (error) {
       throw new UnauthorizedException();
     }
+  }
 
-    const areEqual = await compare(String(body.password), user.password);
+  private async saveToken(token: CreateUserTokenDto): Promise<IUserToken> {
+    return await this.tokenService.createToken(token);
+  }
 
-    if (!areEqual) {
-      throw new HttpException('Неправильний пароль', HttpStatus.UNAUTHORIZED);
+  async changePassword(
+    userId: number,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<boolean> {
+    const password = await this.userService.hashPassword(
+      changePasswordDto.password,
+    );
+
+    await this.userService.updateUser(userId, { password });
+    await this.tokenService.deleteAllTokens(userId);
+    return true;
+  }
+
+  public async confirm(token: string): Promise<any> {
+    const data = await this.verifyToken(token);
+    const user = await this.userService.findUser(data.id);
+
+    await this.tokenService.deleteToken(data.id, token);
+
+    if (user && user.status === statusEnum.PENDING) {
+      user.status = statusEnum.CONFIRMED;
+      return await this.userRepository.update(user.id, {
+        status: statusEnum.CONFIRMED,
+      });
     }
-
-    delete user.password;
-    const token = this.jwtService.sign({ ...user });
-
-    return { token, user };
   }
 
-  private async accessToken(user): Promise<IAuthResponse> {
-    const activateLink = uuidv4();
-    await Promise.all([
-      this.activationLinkRepository.save({
-        userId: user.id,
-        token: activateLink,
-      }),
-      // this.mailService.sendInvintationEmail(user.email, activateLink, user.id),
-    ]);
+  async forgotPassword(body: ForgotPasswordDto): Promise<void> {
+    const user = await this.userService.findUserByEmail(body.email);
+    if (!user) {
+      throw new BadRequestException('Invalid email');
+    }
+    const token = await this.signUser(user);
+    const forgotLink = `${process.env.FRONT_FULL_LINK}/${process.env.CONFIRMATION_LINK}?code=${token}&userId=${user.id}`;
 
-    const accessToken = this.jwtService.sign(
-      { ...user },
-      {
-        secret: process.env.SECRET_KEY,
-        expiresIn: '2h',
-      },
-    );
-
-    return { user, token: accessToken };
-  }
-
-  public async register(body: BaseUserDto): Promise<IAuthResponse> {
-    body.role = await this.roleService.findByName(roleEnum.user);
-    const email = body.email;
-    const isExists = await this.userRepository.findOne({
-      where: { email: email },
-    });
-
-    new CustomValidation().isExists(
-      'Користувач',
-      'такою адресою',
-      email,
-      isExists,
-    );
-
-    const user = await this.userService.createUser(body);
-    delete user.password;
-
-    return await this.accessToken(user);
+    await this.mailService.sendConfirmation(user, forgotLink);
   }
 }

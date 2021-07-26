@@ -13,7 +13,7 @@ export class AdminJwtAuthGuard extends AuthGuard('jwt') {
   }
 
   handleRequest(err, user, info) {
-    if (err || !user || user.role.name != roleEnum.admin) {
+    if (err || !user || user.role.name != roleEnum.ADMIN) {
       throw err || new UnauthorizedException();
     }
     return user;

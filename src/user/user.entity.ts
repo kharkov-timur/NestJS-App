@@ -1,8 +1,9 @@
-import { PrimaryGeneratedColumn, Column, Entity, ManyToOne } from 'typeorm';
-
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { BaseEntity } from '@shared/base.entity';
-import { Role } from './role/role.entity';
+
 import { statusEnum } from './enums/status.enum';
+import { Token } from '../token/token.entity';
+import { roleEnum } from './enums/role.enum';
 
 @Entity({ name: 'users' })
 export class User extends BaseEntity {
@@ -37,6 +38,13 @@ export class User extends BaseEntity {
   })
   public status: statusEnum;
 
-  @ManyToOne(() => Role, (role) => role.users)
-  public role: Role;
+  @Column({
+    type: 'enum',
+    enum: roleEnum,
+    default: roleEnum.USER,
+  })
+  public role: roleEnum;
+
+  @ManyToOne(() => Token, (token) => token.user)
+  public token: Token;
 }
