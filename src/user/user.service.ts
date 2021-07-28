@@ -1,8 +1,7 @@
-import * as _ from 'lodash';
 import * as bcrypt from 'bcrypt';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 
 import { User } from './user.entity';
 import { PaginationDto } from '@shared/pagination.dto';
@@ -10,6 +9,8 @@ import { PaginatedUsers } from './dto/paginatedUsers.dto';
 import { getTotalPages, takeSkipCalculator } from '../utils/get-total-pages';
 import { CreateUserDto } from './dto/create-user.dto';
 import { IUser } from './interfaces/user.intarface';
+import { roleEnum } from './enums/role.enum';
+import { CustomValidation } from '../utils/custom-validation';
 
 @Injectable()
 export class UserService {
@@ -23,31 +24,42 @@ export class UserService {
     return await bcrypt.hash(password, salt);
   }
 
-  async createUser(CreateUserDto: CreateUserDto, role: string): Promise<IUser> {
-    const password = await this.hashPassword(CreateUserDto.password);
+  async createUser(
+    CreateUserDto: CreateUserDto,
+    role: roleEnum,
+  ): Promise<IUser> {
+    const { email, phoneNumber, password, confirmPassword } = CreateUserDto;
 
-    console.log(
-      '🚀 ~ file: user.service.ts ~ line 26 ~ UserService ~ createUser ~ BaseUserDto',
-      CreateUserDto,
-    );
-    const createdUser = _.assignIn(CreateUserDto, {
-      password,
+    const hashPassword = await this.hashPassword(password);
+    const hashConfirmPassword = await this.hashPassword(confirmPassword);
+    const createdUser = {
+      ...CreateUserDto,
+      password: hashPassword,
+      confirmPassword: hashConfirmPassword,
       role,
+    };
+
+    const userIsExist = await this.userRepository.findOne({
+      where: [{ email }, { phoneNumber }],
     });
+
+    if (userIsExist) {
+      new CustomValidation().isExists('User', 'email', email, userIsExist);
+    }
 
     return await this.userRepository.save(createdUser);
   }
 
-  async findUser(userId: number): Promise<User> {
-    return await this.userRepository.findOne(userId);
+  async findUser(id: number): Promise<User> {
+    return await this.userRepository.findOne({ where: { id } });
   }
 
   async findUserByEmail(email: string): Promise<IUser> {
-    return await this.userRepository.findOne(email);
+    return await this.userRepository.findOne({ where: { email } });
   }
 
   async updateUser(id: number, payload: Partial<User>) {
-    return this.userRepository.update(id, { ...payload });
+    return this.userRepository.update(id, payload);
   }
 
   async getAllUsers(paginationDto: PaginationDto): Promise<PaginatedUsers> {

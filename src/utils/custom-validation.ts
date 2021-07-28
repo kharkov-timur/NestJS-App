@@ -1,21 +1,23 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   HttpException,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
-import { ValidationArguments } from 'class-validator/types/validation/ValidationArguments';
 import { DeleteResult } from 'typeorm/query-builder/result/DeleteResult';
 
 import { User } from 'src/user/user.entity';
+import { IUser } from '../user/interfaces/user.intarface';
+import { statusEnum } from '../user/enums/status.enum';
+import { roleEnum } from '../user/enums/role.enum';
 
 export class CustomValidation {
   notFound(
     entityName: string,
     fieldName: string,
     fieldValue: string | number,
-    searchResult: User,
+    searchResult: IUser,
     deleteResult?: DeleteResult,
   ): HttpException | void {
     if (
@@ -23,7 +25,7 @@ export class CustomValidation {
       (!searchResult && !deleteResult.affected)
     ) {
       throw new NotFoundException(
-        `${entityName} з ${fieldName}: ${fieldValue} не знайдено`,
+        `${entityName} with ${fieldName}: ${fieldValue} not found`,
       );
     }
   }
@@ -35,53 +37,27 @@ export class CustomValidation {
     searchResult: User,
   ): HttpException | void {
     if (searchResult) {
-      throw new HttpException(
-        `${entityName} з ${fieldName}: ${fieldValue} вже існує`,
-        409,
+      throw new ConflictException(
+        `${entityName} with ${fieldName}: ${fieldValue} is exist`,
       );
     }
   }
 
   noAccess(currentUserId: boolean, role?: string): HttpException | void {
-    if (!currentUserId && role !== 'admin') {
+    if (!currentUserId && role !== roleEnum.ADMIN) {
       throw new ForbiddenException(`Користувач не має доступу!`);
     }
   }
 
-  socialUnauthorized(socialKey: string): HttpException | void {
-    if (!socialKey) {
-      throw new UnauthorizedException(`Сталася помилка авторизації!`);
-    }
-  }
-
-  userUnauthorized(id: number): HttpException | void {
-    if (!id) {
-      throw new UnauthorizedException(`Користувача з ID: ${id} не знайдено! `);
-    }
-  }
-
   emailNotConfirmed(status: string): HttpException | void {
-    if (status !== 'confirmed') {
+    if (status !== statusEnum.CONFIRMED) {
       throw new ForbiddenException(
-        `Спочатку вам потрібно підтвердити поточну пошту`,
+        `You will need to confirm your current mail first`,
       );
     }
   }
 
-  passwordMismatch(
-    password: string,
-    confirmedPassword: string,
-  ): HttpException | void {
-    if (password !== confirmedPassword) {
-      throw new BadRequestException(`Пароль не співпадає`);
-    }
+  emailNotCorrect(): HttpException | void {
+    throw new BadRequestException(`Email is not correct`);
   }
-}
-
-export function enumValidationMessage(args: ValidationArguments): string {
-  return `${args.value} у полі ${
-    args.property
-  } повинно мати одне із валідних значень: ${Object.values(
-    args.constraints[0],
-  )}`;
 }

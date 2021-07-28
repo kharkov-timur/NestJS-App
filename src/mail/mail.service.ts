@@ -2,8 +2,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { MailerService, ISendMailOptions } from '@nestjs-modules/mailer';
 import * as path from 'path';
 
-import { IUser } from '../user/interfaces/user.intarface';
-
 @Injectable()
 export class MailService {
   constructor(
@@ -12,14 +10,14 @@ export class MailService {
   ) {}
 
   public async sendEmailToConfirm(
-    user: IUser,
+    email: string,
     token: string,
     confirmLink: string,
   ): Promise<boolean> {
     const frontUrl = `${process.env.FRONT_URL}?${token}`;
 
     return await this.sendMailPromise({
-      to: user.email,
+      to: email,
       template: 'register-invite',
       subject: 'Email confirmation',
       text: 'Confirm your email',

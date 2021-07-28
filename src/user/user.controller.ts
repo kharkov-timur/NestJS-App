@@ -8,11 +8,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { UserService } from './user.service';
-import { JwtAuthGuard } from '../auth/jwt.guard';
 import { IRequest } from '../interfaces/request.interface';
 import { User } from './user.entity';
 import { PaginatedUsers } from './dto/paginatedUsers.dto';
 import { PaginationDto } from '@shared/pagination.dto';
+import { JwtAuthGuard } from '../auth/jwt.guard';
 
 @ApiTags('User')
 @Controller('users')

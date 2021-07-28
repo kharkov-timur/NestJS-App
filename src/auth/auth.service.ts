@@ -1,13 +1,10 @@
 import {
-  BadRequestException,
   forwardRef,
   Injectable,
   Inject,
-  MethodNotAllowedException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import _ from 'lodash';
 import * as moment from 'moment';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -23,13 +20,14 @@ import { CreateUserTokenDto } from '../token/dto/create-user-token.dto';
 import { IUserToken } from '../token/interfaces/user-token.interface';
 import { MailService } from '../mail/mail.service';
 import { IReadableUser } from '../user/interfaces/readable-user.interface';
-import { protectedFieldsEnum } from '../user/enums/protected-fields.enum';
 import { SignInDto } from './dto/signin.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/fogot-password.dto';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { IUser } from '../user/interfaces/user.intarface';
+import { ITokenPayload } from './interfaces/token-payload.interface';
+import { CustomValidation } from '../utils/custom-validation';
 
 @Injectable()
 export class AuthService {
@@ -58,32 +56,29 @@ export class AuthService {
     return true;
   }
 
-  public async signIn(SignInDto: SignInDto): Promise<IReadableUser> {
-    const { email, password } = SignInDto;
+  public async signIn({ email, password }: SignInDto): Promise<IReadableUser> {
     const user = await this.userService.findUserByEmail(email);
 
     if (user && (await bcrypt.compare(password, user.password))) {
-      const token = await this.signUser(user);
-      const readableUser: IReadableUser = user;
+      const token = await this.signUser(user, true);
+
+      delete user.password;
+      const readableUser: IReadableUser = user as IReadableUser;
       readableUser.accessToken = token;
 
-      return _.omit<any>(
-        readableUser,
-        Object.values(protectedFieldsEnum),
-      ) as IReadableUser;
+      return readableUser;
     }
-    throw new BadRequestException('Invalid credentials');
+    new CustomValidation().notFound('User', 'email', email, user);
   }
 
   async signUser(
-    user: IUser,
-    withStatusCheck: boolean = true,
+    { id, status, role }: IUser,
+    withStatusCheck: boolean,
   ): Promise<string> {
-    if (withStatusCheck && user.status !== statusEnum.CONFIRMED) {
-      throw new MethodNotAllowedException();
+    if (withStatusCheck && status !== statusEnum.CONFIRMED) {
+      new CustomValidation().emailNotConfirmed(status);
     }
-    const { id, status, role } = user;
-    const tokenPayload = {
+    const tokenPayload: ITokenPayload = {
       id,
       status,
       role,
@@ -102,15 +97,19 @@ export class AuthService {
   }
 
   async changePassword(
-    userId: number,
+    user: IUser,
     changePasswordDto: ChangePasswordDto,
   ): Promise<boolean> {
+    const { id, status } = user;
+
+    new CustomValidation().emailNotConfirmed(status);
+
     const password = await this.userService.hashPassword(
       changePasswordDto.password,
     );
 
-    await this.userService.updateUser(userId, { password });
-    await this.tokenService.deleteAllTokens(userId);
+    await this.userService.updateUser(id, { password });
+    await this.tokenService.deleteAllTokens(id);
     return true;
   }
 
@@ -129,19 +128,23 @@ export class AuthService {
   }
 
   async sendConfirmation(user: IUser) {
+    const { email } = user;
     const token = await this.signUser(user, false);
     const confirmLink = `${this.clientAppUrl}/auth/confirm?token=${token}`;
 
-    await this.mailService.sendEmailToConfirm(user, confirmLink, token);
+    await this.mailService.sendEmailToConfirm(email, confirmLink, token);
   }
 
-  private async generateToken(data, options?: SignOptions): Promise<string> {
+  private async generateToken(
+    data: ITokenPayload,
+    options?: SignOptions,
+  ): Promise<string> {
     return this.jwtService.sign(data, options);
   }
 
   private async verifyToken(token: string): Promise<any> {
     try {
-      const data = this.jwtService.verify(token);
+      const data = this.jwtService.verify(token) as ITokenPayload;
       const tokenExists = await this.tokenService.existsToken(data.id, token);
 
       if (tokenExists) {
@@ -157,14 +160,14 @@ export class AuthService {
     return await this.tokenService.createToken(token);
   }
 
-  async forgotPassword(body: ForgotPasswordDto): Promise<void> {
-    const user = await this.userService.findUserByEmail(body.email);
+  async forgotPassword({ email }: ForgotPasswordDto): Promise<void> {
+    const user = await this.userService.findUserByEmail(email);
     if (!user) {
-      throw new BadRequestException('Invalid email');
+      new CustomValidation().emailNotCorrect();
     }
-    const token = await this.signUser(user);
+    const token = await this.signUser(user, true);
     const forgotLink = `${this.clientAppUrl}/auth/forgotPassword?token=${token}&userId=${user.id}`;
 
-    await this.mailService.sendEmailToConfirm(user, forgotLink, token);
+    await this.mailService.sendEmailToConfirm(email, forgotLink, token);
   }
 }

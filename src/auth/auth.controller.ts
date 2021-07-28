@@ -16,11 +16,10 @@ import { SignInDto } from './dto/signin.dto';
 import { ConfirmAccountDto } from './dto/confirm-account.dto';
 import { IReadableUser } from '../user/interfaces/readable-user.interface';
 import { ForgotPasswordDto } from './dto/fogot-password.dto';
-import { IUser } from '../user/interfaces/user.intarface';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { User } from '../user/user.entity';
 import { CreateUserDto } from '../user/dto/create-user.dto';
+import { JwtAuthGuard } from './jwt.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -57,11 +56,11 @@ export class AuthController {
   }
 
   @Patch('/changePassword')
-  @UseGuards(AuthGuard())
+  @UseGuards(JwtAuthGuard)
   async changePassword(
     @GetUser() user: User,
     @Body(new ValidationPipe()) changePasswordDto: ChangePasswordDto,
   ): Promise<boolean> {
-    return this.authService.changePassword(user.id, changePasswordDto);
+    return this.authService.changePassword(user, changePasswordDto);
   }
 }
