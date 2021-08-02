@@ -26,7 +26,7 @@ import { JwtAuthGuard } from './jwt.guard';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Post('/signUp')
+  @Post('/sign-up')
   async signUp(
     @Body(new ValidationPipe()) CreateUserDto: CreateUserDto,
   ): Promise<boolean> {
@@ -41,21 +41,21 @@ export class AuthController {
     return true;
   }
 
-  @Post('/signIn')
+  @Post('/sign-in')
   public async signIn(
     @Body(new ValidationPipe()) SignInDto: SignInDto,
   ): Promise<IReadableUser> {
     return this.authService.signIn(SignInDto);
   }
 
-  @Post('/forgotPassword')
+  @Post('/forgot-password')
   public async forgotPassword(
     @Body(new ValidationPipe()) forgotPasswordDto: ForgotPasswordDto,
   ): Promise<void> {
     return this.authService.forgotPassword(forgotPasswordDto);
   }
 
-  @Patch('/changePassword')
+  @Patch('/change-password')
   @UseGuards(JwtAuthGuard)
   async changePassword(
     @GetUser() user: User,

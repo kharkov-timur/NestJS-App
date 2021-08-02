@@ -45,7 +45,7 @@ export class CustomValidation {
 
   noAccess(currentUserId: boolean, role?: string): HttpException | void {
     if (!currentUserId && role !== roleEnum.ADMIN) {
-      throw new ForbiddenException(`Користувач не має доступу!`);
+      throw new ForbiddenException(`User doesn't have access!`);
     }
   }
 

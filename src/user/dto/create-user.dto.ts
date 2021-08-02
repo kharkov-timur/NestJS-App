@@ -38,8 +38,9 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   @Matches(
-    /^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,})/,
-    { message: 'Weak password' },
+     /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/,
+        //  /^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,})/,
+    { message: 'Minimum eight characters, at least one letter and one number:' },
   )
   password: string;
 
