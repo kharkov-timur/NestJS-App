@@ -9,46 +9,45 @@ import {
   IsDateString,
 } from 'class-validator';
 import { Match } from '../match.decorator';
-import { roleEnum } from '../enums/role.enum';
 
 export class CreateUserDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   @Matches(/^[a-zA-ZА-Яа-яёЁЇїІіЄєҐґ ]+$/)
-  firstName: string;
+  public firstName: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   @Matches(/^[a-zA-ZА-Яа-яёЁЇїІіЄєҐґ ]+$/)
-  lastName: string;
+  public lastName: string;
 
   @ApiProperty()
   @IsOptional()
   // @IsPhoneNumber('UA')
-  phoneNumber: string;
+  public phoneNumber: string;
 
   @ApiProperty()
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  public email: string;
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   @Matches(
-     /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/,
-        //  /^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,})/,
-    { message: 'Minimum eight characters, at least one letter and one number:' },
+    /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/,
+    //  /^(((?=.*[a-z])(?=.*[A-Z]))|((?=.*[a-z])(?=.*[0-9]))|((?=.*[A-Z])(?=.*[0-9])))(?=.{6,})/,
+    {
+      message: 'Minimum eight characters, at least one letter and one number:',
+    },
   )
-  password: string;
+  public password: string;
 
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  @Match('password', { message: 'Password must match' })
-  confirmPassword: string;
-
-  role: roleEnum;
+  // @ApiProperty()
+  // @IsString()
+  // @IsNotEmpty()
+  // @Match('password', { message: 'Password must match' })
+  // public confirmPassword: string;
 }

@@ -28,9 +28,9 @@ export class AuthController {
 
   @Post('/sign-up')
   async signUp(
-    @Body(new ValidationPipe()) CreateUserDto: CreateUserDto,
+    @Body(new ValidationPipe()) createUserDto: CreateUserDto,
   ): Promise<boolean> {
-    return this.authService.signUp(CreateUserDto);
+    return this.authService.signUp(createUserDto);
   }
 
   @Get('/confirm')
@@ -43,16 +43,17 @@ export class AuthController {
 
   @Post('/sign-in')
   public async signIn(
-    @Body(new ValidationPipe()) SignInDto: SignInDto,
+    @Body(new ValidationPipe()) signInDto: SignInDto,
   ): Promise<IReadableUser> {
-    return this.authService.signIn(SignInDto);
+    return this.authService.signIn(signInDto);
   }
 
   @Post('/forgot-password')
   public async forgotPassword(
     @Body(new ValidationPipe()) forgotPasswordDto: ForgotPasswordDto,
-  ): Promise<void> {
-    return this.authService.forgotPassword(forgotPasswordDto);
+  ): Promise<any> {
+    await this.authService.forgotPassword(forgotPasswordDto);
+    return { message: 'Email sent' };
   }
 
   @Patch('/change-password')

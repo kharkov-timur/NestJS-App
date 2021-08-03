@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from '@shared/base.entity';
 
 import { statusEnum } from './enums/status.enum';
@@ -7,6 +7,9 @@ import { roleEnum } from './enums/role.enum';
 
 @Entity({ name: 'users' })
 export class User extends BaseEntity {
+  @PrimaryGeneratedColumn()
+  public id: number;
+
   @Column({
     nullable: true,
   })
@@ -23,7 +26,7 @@ export class User extends BaseEntity {
   public phoneNumber: string;
 
   @Column({ unique: true })
-  email: string;
+  public email: string;
 
   @Column({ nullable: true })
   public password: string;

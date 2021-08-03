@@ -24,27 +24,39 @@ export class UserService {
     return await bcrypt.hash(password, salt);
   }
 
-  async createUser(
-    CreateUserDto: CreateUserDto,
-    role: roleEnum,
-  ): Promise<IUser> {
-    const { email, phoneNumber, password, confirmPassword } = CreateUserDto;
+  async createUser(createUserDto: CreateUserDto): Promise<IUser> {
+    const { email, phoneNumber, password } = createUserDto;
 
     const hashPassword = await this.hashPassword(password);
-    const hashConfirmPassword = await this.hashPassword(confirmPassword);
     const createdUser = {
-      ...CreateUserDto,
+      ...createUserDto,
       password: hashPassword,
-      confirmPassword: hashConfirmPassword,
-      role,
     };
 
-    const userIsExist = await this.userRepository.findOne({
-      where: [{ email }, { phoneNumber }],
+    const userWithEmailExist = await this.userRepository.findOne({
+      where: [{ email }],
     });
 
-    if (userIsExist) {
-      new CustomValidation().isExists('User', 'email', email, userIsExist);
+    const userWithPhoneExist = await this.userRepository.findOne({
+      where: [{ phoneNumber }],
+    });
+
+    if (userWithEmailExist) {
+      new CustomValidation().isExists(
+        'User',
+        'email',
+        email,
+        userWithEmailExist,
+      );
+    }
+
+    if (userWithPhoneExist) {
+      new CustomValidation().isExists(
+        'User',
+        'email',
+        phoneNumber,
+        userWithPhoneExist,
+      );
     }
 
     return await this.userRepository.save(createdUser);
@@ -62,18 +74,18 @@ export class UserService {
     return this.userRepository.update(id, payload);
   }
 
-  async getAllUsers(paginationDto: PaginationDto): Promise<PaginatedUsers> {
-    const { page, limit } = paginationDto;
-    const { skip } = takeSkipCalculator(limit, page);
+  async getAllUsers(): Promise<User[]> {
+    // const { page, limit } = paginationDto;
+    // const { skip } = takeSkipCalculator(limit, page);
+    // .leftJoinAndSelect('users.role', 'role')
+    // .take(limit)
+    // .skip(skip)
+    // const totalPages = getTotalPages(count, limit, page);
 
-    const [data, count]: [User[], number] = await this.userRepository
-      .createQueryBuilder('users')
-      .leftJoinAndSelect('users.role', 'role')
-      .take(limit)
-      .skip(skip)
-      .getManyAndCount();
-    const totalPages = getTotalPages(count, limit, page);
+    const allUsers = await this.userRepository
+      .createQueryBuilder('user')
+      .getMany();
 
-    return { data, count, totalPages };
+    return allUsers;
   }
 }

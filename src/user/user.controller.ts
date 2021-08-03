@@ -22,10 +22,9 @@ export class UserController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get()
-  async getAllUsers(
-    @Query() paginationDto: PaginationDto,
-  ): Promise<PaginatedUsers> {
-    return this.userService.getAllUsers(paginationDto);
+  // @Query() paginationDto: PaginationDto,
+  async getAllUsers(): Promise<User[]> {
+    return this.userService.getAllUsers();
   }
 
   @ApiBearerAuth()

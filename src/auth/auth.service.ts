@@ -47,11 +47,9 @@ export class AuthService {
     this.clientAppUrl = this.configService.get<string>('FE_APP_URL');
   }
 
-  public async signUp(CreateUserDto: CreateUserDto): Promise<boolean> {
-    const user = await this.userService.createUser(
-      CreateUserDto,
-      roleEnum.USER,
-    );
+  public async signUp(createUserDto: CreateUserDto): Promise<boolean> {
+    const user = await this.userService.createUser(createUserDto);
+
     await this.sendConfirmation(user);
     return true;
   }
