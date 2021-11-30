@@ -7,16 +7,13 @@ const config = {
   password: process.env.POSTGRES_PASSWORD,
   database: process.env.POSTGRES_DB,
   synchronize: JSON.parse(process.env.PORSTRES_SYNCHRONIZE),
-  entities: [
-    'dist/**/*.entity{.ts,.js}'
-  ],
-  migrations: [
-    'database/migration/seed/**/*.js'
-  ],
+  entities: ['dist/**/*.entity{.ts,.js}'],
+  migrations: ['database/migration/seed/**/*.js'],
+  autoLoadEntities: true,
   cli: {
     entitiesDir: 'src',
     migrationsDir: 'database/migration/seed',
-  }
+  },
 };
 
 if (JSON.parse(process.env.POSTGRES_SSL_ENABLED)) {

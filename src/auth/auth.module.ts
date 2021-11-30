@@ -1,25 +1,29 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
+import { PassportModule } from '@nestjs/passport';
+
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from '../user/user.module';
-import { PassportModule } from '@nestjs/passport';
-import { JwtModule } from '@nestjs/jwt';
-import { RoleModule } from '../user/role/role.module';
-import { JwtStrategy } from './jwt.strategy';
-import { UserService } from '../user/user.service';
+import { configModule } from '../configure.root';
+import { TokenModule } from '../token/token.module';
+import { MailModule } from '../mail/mail.module';
+import { JwtAuthModule } from './jwt/jwt-auth.module';
+import { SocialModule } from './social/social.module';
+import { DeviceModule } from '../push-notification/device/device.module';
 
 @Module({
   imports: [
-    UserModule,
-    PassportModule,
-    JwtModule.register({
-      secret: process.env.SECRET_KEY,
-      signOptions: { expiresIn: process.env.TOKEN_EXPIRES },
-    }),
-    RoleModule,
+    TokenModule,
+    forwardRef(() => UserModule),
+    forwardRef(() => MailModule),
+    configModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtAuthModule,
+    SocialModule,
+    DeviceModule,
   ],
-  providers: [AuthService, JwtStrategy, UserService],
+  providers: [AuthService],
   controllers: [AuthController],
-  exports: [JwtModule],
+  exports: [AuthService],
 })
 export class AuthModule {}

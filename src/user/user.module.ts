@@ -1,23 +1,26 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { JwtModule } from '@nestjs/jwt';
 
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { User } from './user.entity';
-import { Role } from './role/role.entity';
-import { ActivateLink } from './activate-link.entity';
+import { TokenModule } from '../token/token.module';
+import { Event } from '../events/event.entity';
+import { AuthModule } from '../auth/auth.module';
+import { ImageUtilsModule } from '../files/image/image-utils.module';
+import { File } from '../files/files.entity';
+import { FilesService } from '../files/files.service';
+import { ImageUtilsService } from '../files/image/image-utils.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role, ActivateLink]),
-    JwtModule.register({
-      secret: process.env.SECRET_KEY,
-      signOptions: { expiresIn: process.env.TOKEN_EXPIRES },
-    }),
+    TypeOrmModule.forFeature([User, Event, File]),
+    TokenModule,
+    ImageUtilsModule,
+    forwardRef(() => AuthModule),
   ],
-  exports: [TypeOrmModule, JwtModule],
-  providers: [UserService],
+  providers: [UserService, FilesService, ImageUtilsService],
   controllers: [UserController],
+  exports: [TypeOrmModule, UserService],
 })
 export class UserModule {}
