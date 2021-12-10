@@ -2,7 +2,7 @@
 
 Link to visit https://event.waf.com.ua/api/v1/swagger-html/#/
 
-Stack
+## Stack
 - Node.js
 - Nest.js
 - PostgreSQL
